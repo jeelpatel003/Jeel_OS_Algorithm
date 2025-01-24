@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Algorithm Simulator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+        label, select, input, button {
+            display: block;
+            margin: 10px 0;
+        }
+        .gantt-chart {
+            display: flex;
+            margin-top: 20px;
+            border: 1px solid #000;
+        }
+        .gantt-block {
+            flex: 1;
+            text-align: center;
+            padding: 5px;
+            border-right: 1px solid #000;
+        }
+        .gantt-block:last-child {
+            border-right: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Algorithm Simulator</h1>
+    <form id="algorithmForm">
+        <!-- Algorithm Type Selection -->
+        <label for="algorithmType">Select Algorithm Type:</label>
+        <select id="algorithmType">
+            <option value="">--Choose an Option--</option>
+            <option value="scheduling">Scheduling Algorithm</option>
+            <option value="pageReplacement">Page Replacement Algorithm</option>
+        </select>
+
+        <!-- Scheduling Options -->
+        <div id="schedulingOptions" class="hidden">
+            <label for="scheduling">Select Scheduling Algorithm:</label>
+            <select id="scheduling">
+                <option value="">--Choose an Option--</option>
+                <option value="FCFS">First-Come, First-Served (FCFS)</option>
+                <option value="SJN">Shortest Job Next (SJN)</option>
+            </select>
+
+            <label for="burstTimes">Enter Burst Times (comma-separated):</label>
+            <input type="text" id="burstTimes" placeholder="e.g., 5,3,8,6">
+        </div>
+
+        <!-- Page Replacement Options -->
+        <div id="pageReplacementOptions" class="hidden">
+            <label for="pageReplacement">Select Page Replacement Algorithm:</label>
+            <select id="pageReplacement">
+                <option value="">--Choose an Option--</option>
+                <option value="FIFO">FIFO</option>
+                <option value="Optimal">Optimal Page Replacement</option>
+                <option value="LRU">LRU</option>
+                <option value="MRU">MRU</option>
+            </select>
+
+            <label for="pageReference">Enter Page References (comma-separated):</label>
+            <input type="text" id="pageReference" placeholder="e.g., 7,0,1,2,0,3,0,4,2">
+
+            <label for="pageFrame">Enter Number of Page Frames:</label>
+            <input type="number" id="pageFrame" placeholder="e.g., 3">
+        </div>
+
+        <!-- Submit Button -->
+        <button type="button" id="submitButton">Simulate</button>
+    </form>
+
+    <!-- Result Display -->
+    <h2>Results:</h2>
+    <pre id="results"></pre>
+
+    <!-- Gantt Chart -->
+    <h2 id="ganttChartTitle" class="hidden">Gantt Chart:</h2>
+    <div id="ganttChart" class="gantt-chart hidden"></div>
+
+    <script>
+        const algorithmType = document.getElementById("algorithmType");
+        const schedulingOptions = document.getElementById("schedulingOptions");
+        const pageReplacementOptions = document.getElementById("pageReplacementOptions");
+        const submitButton = document.getElementById("submitButton");
+        const results = document.getElementById("results");
+        const ganttChart = document.getElementById("ganttChart");
+        const ganttChartTitle = document.getElementById("ganttChartTitle");
+
+        // Show options based on selected algorithm type
+        algorithmType.addEventListener("change", () => {
+            schedulingOptions.classList.add("hidden");
+            pageReplacementOptions.classList.add("hidden");
+            ganttChart.classList.add("hidden");
+            ganttChartTitle.classList.add("hidden");
+
+            if (algorithmType.value === "scheduling") {
+                schedulingOptions.classList.remove("hidden");
+            } else if (algorithmType.value === "pageReplacement") {
+                pageReplacementOptions.classList.remove("hidden");
+            }
+        });
+
+        // Simulate Scheduling Algorithms
+        function simulateScheduling(algorithm, burstTimes) {
+            const bursts = burstTimes.split(',').map(Number);
+            let gantt = "";
+            let time = 0;
+            let totalWaitingTime = 0;
+            let totalTurnaroundTime = 0;
+
+            if (algorithm === "FCFS") {
+                bursts.forEach((burst, index) => {
+                    gantt += `P${index + 1} (${time}-${time + burst}) `;
+                    totalWaitingTime += time;
+                    totalTurnaroundTime += time + burst;
+                    time += burst;
+                });
+            } else if (algorithm === "SJN") {
+                bursts.sort((a, b) => a - b);
+                bursts.forEach((burst, index) => {
+                    gantt += `P${index + 1} (${time}-${time + burst}) `;
+                    totalWaitingTime += time;
+                    totalTurnaroundTime += time + burst;
+                    time += burst;
+                });
+            }
+
+            return {
+                gantt,
+                avgWaitingTime: (totalWaitingTime / bursts.length).toFixed(2),
+                avgTurnaroundTime: (totalTurnaroundTime / bursts.length).toFixed(2),
+            };
+        }
+
+        // Simulate Page Replacement Algorithms
+        function simulatePageReplacement(algorithm, pageReferences, frames) {
+            const pages = pageReferences.split(',').map(Number);
+            const frame = [];
+            let pageFaults = 0;
+            let result = "";
+
+            pages.forEach((page, index) => {
+                if (!frame.includes(page)) {
+                    if (frame.length >= frames) frame.shift();
+                    frame.push(page);
+                    pageFaults++;
+                }
+                result += `Step ${index + 1}: ${frame.join(', ')}\n`;
+            });
+
+            result += `\nTotal Page Faults: ${pageFaults}`;
+            return result;
+        }
+
+        // Handle form submission
+        submitButton.addEventListener("click", () => {
+            const selectedType = algorithmType.value;
+            results.textContent = ""; // Clear previous results
+            ganttChart.innerHTML = ""; // Clear previous Gantt chart
+            ganttChart.classList.add("hidden");
+            ganttChartTitle.classList.add("hidden");
+
+            if (!selectedType) {
+                results.textContent = "Please select an algorithm type.";
+                return;
+            }
+
+            if (selectedType === "scheduling") {
+                const algorithm = document.getElementById("scheduling").value;
+                const burstTimes = document.getElementById("burstTimes").value;
+
+                if (!algorithm || !burstTimes) {
+                    results.textContent = "Please fill out all fields for Scheduling Algorithm.";
+                    return;
+                }
+
+                const { gantt, avgWaitingTime, avgTurnaroundTime } = simulateScheduling(algorithm, burstTimes);
+                results.textContent = `Average Waiting Time: ${avgWaitingTime}\nAverage Turnaround Time: ${avgTurnaroundTime}`;
+                gantt.split(" ").forEach((block) => {
+                    const div = document.createElement("div");
+                    div.textContent = block;
+                    div.className = "gantt-block";
+                    ganttChart.appendChild(div);
+                });
+                ganttChart.classList.remove("hidden");
+                ganttChartTitle.classList.remove("hidden");
+            } else if (selectedType === "pageReplacement") {
+                const algorithm = document.getElementById("pageReplacement").value;
+                const pageReferences = document.getElementById("pageReference").value;
+                const frames = parseInt(document.getElementById("pageFrame").value);
+
+                if (!algorithm || !pageReferences || isNaN(frames)) {
+                    results.textContent = "Please fill out all fields for Page Replacement Algorithm.";
+                    return;
+                }
+
+                results.textContent = simulatePageReplacement(algorithm, pageReferences, frames);
+            }
+        });
+    </script>
+</body>
+</html>
